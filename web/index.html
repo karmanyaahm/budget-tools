@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget Pies</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="vendor/sql-wasm.js"></script>
+  <script src="vendor/chart.umd.js"></script>
+</head>
+<body>
+  <header id="fileRow">
+    <strong class="brand">Budget Pies</strong>
+    <label class="filebtn">
+      Upload .buckets
+      <input type="file" id="fileInput" accept=".buckets,.sqlite,.db" hidden />
+    </label>
+    <button id="pickBtn" class="btn hidden">Open file (remember)</button>
+    <button id="refreshBtn" class="btn hidden" title="Re-read the opened file">Refresh data</button>
+    <button id="reconnectBtn" class="btn hidden"></button>
+    <span id="status" class="status"></span>
+  </header>
+
+  <p id="dropHint" class="hint">
+    Upload your <code>My Budget.buckets</code> file to begin. Everything runs in
+    your browser — the file is never uploaded anywhere.
+  </p>
+
+  <div id="app" class="hidden">
+    <div id="dateBar" class="bar"></div>
+    <div id="tabs" class="tabs"></div>
+
+    <div id="main">
+      <section id="treePanel">
+        <div id="treeHead">
+          <button id="combineAll" class="btn">Combine all</button>
+          <button id="splitAll" class="btn">Split all</button>
+          <div class="treelegend">
+            ▶ open · ☑ = one slice (untick to split) · untick a bucket to exclude
+          </div>
+        </div>
+        <div id="tree"></div>
+      </section>
+
+      <section id="chartPanel">
+        <h2 id="chartTitle"></h2>
+        <p id="methodology"></p>
+        <p id="totals"></p>
+        <div id="canvasWrap"><canvas id="pie"></canvas></div>
+      </section>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
