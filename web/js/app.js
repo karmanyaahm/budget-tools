@@ -1,8 +1,9 @@
 // Orchestrator: load DB -> colors -> tabs -> date bar -> render tree + pie.
 import { METRICS, NOGROUP, OTHER, buildGroups, fmtMoney, ytd, scopeKey } from "./model.js";
-import { openDatabase, fetchBucketTotals, dataYearSpan } from "./db.js";
+import { openDatabase, fetchBucketTotals, fetchQuietData, dataYearSpan } from "./db.js";
+import { renderStreaks } from "./streaks.js";
 import { buildColorMap } from "./colors.js";
-import { loadState, saveState, getScope, getOtherPct, setOtherPct } from "./state.js";
+import { loadState, saveState, getScope, getOtherPct, setOtherPct, bucketEnabled } from "./state.js";
 import { computeSlices, baseSlices, otherizedCount, targetForCount, PieView } from "./pie.js";
 import { TreeView } from "./tree.js";
 import { DateBar } from "./datebar.js";
@@ -17,13 +18,17 @@ let datebar = null;
 let pie = null;
 let tree = null;
 
-let activeIdx = Math.min(state.tab || 0, METRICS.length - 1);
+const STREAKS_KEY = "__streaks__";
+const TABS = [...METRICS, { key: STREAKS_KEY, title: "Quiet Days" }];
+
+let activeIdx = Math.min(state.tab || 0, TABS.length - 1);
 let currentRows = [];
 let currentGroups = [];
 let currentGrand = 1;
 let spanText = "";
 let currentScope = null;
 let currentOtherized = new Set();
+let currentDayData = null;   // {perBucketSpend, activity, dataMin, dataMax}
 
 // ---------- data load ----------
 async function useBytes(bytes, label) {
@@ -33,11 +38,11 @@ async function useBytes(bytes, label) {
 
   datebar = new DateBar($("dateBar"), {
     yearLo: lo, yearHi: hi,
-    otherPct: getOtherPct(state, METRICS[activeIdx].key),
+    otherPct: getOtherPct(state, TABS[activeIdx].key),
     includeTransfers: state.includeTransfers,
     onRange: (s, e) => { state.range = [s, e]; saveState(state); reload(s, e); },
-    onOtherTarget: (v) => { setOtherPct(state, METRICS[activeIdx].key, v); saveState(state); recomputeChart(); },
-    onOtherStep: (dir) => stepOther(dir),
+    onOtherTarget: (v) => { if (isStreaks()) return; setOtherPct(state, TABS[activeIdx].key, v); saveState(state); recomputeChart(); },
+    onOtherStep: (dir) => { if (!isStreaks()) stepOther(dir); },
     onTransfers: (b) => { state.includeTransfers = b; saveState(state); rebuildColors(); reload(...(state.range || ytd())); },
   });
 
@@ -64,7 +69,7 @@ function rebuildColors() {
 function buildTabs() {
   const tabs = $("tabs");
   tabs.innerHTML = "";
-  METRICS.forEach((m, i) => {
+  TABS.forEach((m, i) => {
     const b = document.createElement("button");
     b.className = "tab" + (i === activeIdx ? " active" : "");
     b.textContent = m.title.split("·")[0].trim();
@@ -87,9 +92,20 @@ function reload(start, end) {
   renderActive();
 }
 
+const isStreaks = () => TABS[activeIdx].key === STREAKS_KEY;
+
+function showPanels(mode) { // 'pie' | 'streaks'
+  $("chartPanel").classList.toggle("hidden", mode !== "pie");
+  $("streaksPanel").classList.toggle("hidden", mode !== "streaks");
+  const oc = document.querySelector(".otherctl");
+  if (oc) oc.style.display = mode === "pie" ? "" : "none"; // Other ≤ is pie-only
+}
+
 // ---------- render the active tab ----------
 function renderActive() {
-  const metric = METRICS[activeIdx];
+  if (TABS[activeIdx].key === STREAKS_KEY) { renderStreaksTab(); return; }
+  showPanels("pie");
+  const metric = TABS[activeIdx];
   currentGroups = buildGroups(currentRows, metric.key);
   currentGrand = currentGroups.reduce((a, g) => a + g.total, 0) || 1;
 
@@ -111,8 +127,48 @@ function renderActive() {
   recomputeChart();
 }
 
+// "Quiet Days" tab: tree of spending categories on the left, no-spend /
+// no-activity streak lists on the right. Unticking a bucket drops it from the
+// "spend day" calculation. Tree state is per-tab (scope key __streaks__).
+function renderStreaksTab() {
+  showPanels("streaks");
+  const [start, end] = state.range || [null, null];
+  currentDayData = fetchQuietData(db, { start, end });
+  // Tree of spending buckets (by gross outflow) for category selection.
+  currentGroups = buildGroups(currentRows, "gross_spend");
+  currentGrand = currentGroups.reduce((a, g) => a + g.total, 0) || 1;
+
+  tree = new TreeView($("tree"), {
+    groups: currentGroups,
+    scope: currentScope,
+    metricKey: STREAKS_KEY,
+    colorMap,
+    grandTotal: currentGrand,
+    onChange: () => { saveState(state); recomputeStreaks(); },
+  });
+  recomputeStreaks();
+}
+
+function recomputeStreaks() {
+  // Union the spend-days of every ticked bucket.
+  const spend = new Set();
+  for (const g of currentGroups) {
+    for (const b of g.buckets) {
+      if (!bucketEnabled(currentScope, STREAKS_KEY, b.id)) continue;
+      const days = currentDayData.perBucketSpend.get(b.id);
+      if (days) for (const d of days) spend.add(d);
+    }
+  }
+  renderStreaks($("streaksPanel"), {
+    spend,
+    activity: currentDayData.activity,
+    dataMin: currentDayData.dataMin,
+    dataMax: currentDayData.dataMax,
+  }, state.range);
+}
+
 function recomputeChart() {
-  const metric = METRICS[activeIdx];
+  const metric = TABS[activeIdx];
   const { slices, otherized, visible } = computeSlices(currentGroups, currentScope, metric.key, getOtherPct(state, metric.key));
   currentOtherized = otherized;
   pie.render(slices, currentGrand);
@@ -144,7 +200,7 @@ function onSliceHover(colorKey) {
 //  dir>0 -> absorb the smallest currently-visible category into Other
 //  dir<0 -> release the largest currently-hidden category back to the pie
 function stepOther(dir) {
-  const metric = METRICS[activeIdx];
+  const metric = TABS[activeIdx];
   const base = baseSlices(currentGroups, currentScope, metric.key);
   const total = base.reduce((a, s) => a + s.val, 0);
   if (!total) return;

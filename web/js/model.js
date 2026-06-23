@@ -110,6 +110,28 @@ export function yearRange(year) {
   return [`${year}-01-01`, `${year}-12-31`];
 }
 
+// Contiguous runs of days in [startISO, endISO] NOT present in `present` (a Set
+// of "YYYY-MM-DD"). Returns [{start, end, days}] most-recent-first.
+export function computeGaps(present, startISO, endISO) {
+  const DAY = 86400000;
+  const toMs = (iso) => { const [y, m, d] = iso.split("-").map(Number); return Date.UTC(y, m - 1, d); };
+  const toIso = (ms) => { const d = new Date(ms); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
+  const s = toMs(startISO), e = toMs(endISO);
+  const runs = [];
+  let runStart = null, runEnd = null;
+  for (let t = s; t <= e; t += DAY) {
+    const iso = toIso(t);
+    if (!present.has(iso)) { if (runStart === null) runStart = t; runEnd = t; }
+    else if (runStart !== null) {
+      runs.push({ start: toIso(runStart), end: toIso(runEnd), days: (runEnd - runStart) / DAY + 1 });
+      runStart = null;
+    }
+  }
+  if (runStart !== null) runs.push({ start: toIso(runStart), end: toIso(runEnd), days: (runEnd - runStart) / DAY + 1 });
+  runs.sort((a, b) => (a.end < b.end ? 1 : -1)); // most recent first
+  return runs;
+}
+
 // Whole calendar month `delta` months from dateStr's month (today if null).
 export function monthOf(dateStr, delta) {
   let y, m;

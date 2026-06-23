@@ -30,6 +30,52 @@ export function dataYearSpan(db) {
   return [lo, Math.max(hi, today)];
 }
 
+// For the "Quiet Days" tab:
+//  - perBucketSpend: Map<bucket_id, Set<day>> of outflow days (non-transfer),
+//    so the category tree can choose which buckets count as "spend".
+//  - activity: Set<day> with ANY account transaction (in or out).
+//  - dataMin / dataMax: the full data window.
+export function fetchQuietData(db, { start, end } = {}) {
+  const bf = [], bp = {};
+  if (start) { bf.push("substr(bt.posted,1,10) >= $start"); bp.$start = start; }
+  if (end) { bf.push("substr(bt.posted,1,10) <= $end"); bp.$end = end; }
+  const band = bf.length ? " AND " + bf.join(" AND ") : "";
+
+  const perBucketSpend = new Map();
+  let st = db.prepare(
+    "SELECT bt.bucket_id bid, substr(bt.posted,1,10) d " +
+    "FROM bucket_transaction bt JOIN account_transaction at ON at.id = bt.account_trans_id " +
+    "WHERE bt.amount < 0 AND COALESCE(at.general_cat,'') != 'transfer'" + band +
+    " GROUP BY bid, d"
+  );
+  st.bind(bp);
+  while (st.step()) {
+    const r = st.getAsObject();
+    let s = perBucketSpend.get(r.bid);
+    if (!s) { s = new Set(); perBucketSpend.set(r.bid, s); }
+    s.add(r.d);
+  }
+  st.free();
+
+  const af = [], ap = {};
+  if (start) { af.push("substr(posted,1,10) >= $start"); ap.$start = start; }
+  if (end) { af.push("substr(posted,1,10) <= $end"); ap.$end = end; }
+  const awhere = af.length ? " WHERE " + af.join(" AND ") : "";
+  const activity = new Set();
+  st = db.prepare("SELECT DISTINCT substr(posted,1,10) d FROM account_transaction" + awhere);
+  st.bind(ap);
+  while (st.step()) activity.add(st.getAsObject().d);
+  st.free();
+
+  const r = db.prepare(
+    "SELECT MIN(substr(posted,1,10)) mn, MAX(substr(posted,1,10)) mx FROM account_transaction"
+  );
+  r.step();
+  const { mn, mx } = r.getAsObject();
+  r.free();
+  return { perBucketSpend, activity, dataMin: mn, dataMax: mx };
+}
+
 // Returns one object per bucket with its group + the five metrics (cents).
 export function fetchBucketTotals(db, { start, end, includeTransfers } = {}) {
   const where = [];

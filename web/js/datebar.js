@@ -77,7 +77,7 @@ export class DateBar {
     right.className = "right";
 
     const otherWrap = document.createElement("span");
-    otherWrap.className = "lbl";
+    otherWrap.className = "lbl otherctl";
     otherWrap.append(document.createTextNode("Other ≤ "));
     const stepDown = document.createElement("button");
     stepDown.className = "btn step"; stepDown.textContent = "−";
