@@ -1,5 +1,5 @@
 // "Quiet Days" view: contiguous periods with no spending / no activity.
-import { computeGaps } from "./model.js";
+import { computeGaps, pad } from "./model.js";
 
 function fmtRun(r) {
   if (r.days === 1) return r.start;
@@ -43,6 +43,67 @@ function section(title, desc, present, winStart, winEnd, hue) {
   return el;
 }
 
+// Calendar heatmap: one row per month, 31 day cells. Quiet days are shaded by
+// the length of the streak they belong to (so streaks read as solid blocks);
+// spend days are faint grey. Color hue matches the matching list.
+function buildCalendar(present, winStart, winEnd, hue, title) {
+  const runs = computeGaps(present, winStart, winEnd);
+  const maxLen = runs.reduce((m, r) => Math.max(m, r.days), 0) || 1;
+  const len = new Map();
+  for (const r of runs) {
+    let t = Date.UTC(...r.start.split("-").map(Number).map((v, i) => i === 1 ? v - 1 : v));
+    const endMs = Date.UTC(...r.end.split("-").map(Number).map((v, i) => i === 1 ? v - 1 : v));
+    for (; t <= endMs; t += 86400000) {
+      const d = new Date(t);
+      len.set(`${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`, r.days);
+    }
+  }
+
+  const wrap = document.createElement("div");
+  wrap.className = "cal";
+  wrap.innerHTML = `<h3>${title}</h3><p class="sub">color = streak length · hover a cell for the date</p>`;
+  const grid = document.createElement("div");
+  grid.className = "calgrid";
+
+  let [y, m] = winStart.split("-").map(Number);
+  const [ey, em] = winEnd.split("-").map(Number);
+  while (y < ey || (y === ey && m <= em)) {
+    const row = document.createElement("div");
+    row.className = "calrow";
+    const lab = document.createElement("span");
+    lab.className = "calmonth";
+    lab.textContent = `${y}-${pad(m)}`;
+    row.append(lab);
+    const dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    let quiet = 0;
+    for (let d = 1; d <= 31; d++) {
+      const cell = document.createElement("span");
+      cell.className = "calcell";
+      const iso = `${y}-${pad(m)}-${pad(d)}`;
+      if (d > dim || iso < winStart || iso > winEnd) {
+        cell.classList.add("blank");
+      } else if (len.has(iso)) {
+        const t = len.get(iso) / maxLen;
+        cell.style.background = `hsl(${hue} 80% ${92 - 42 * t}%)`;
+        cell.title = `${iso} · ${len.get(iso)}d no-spend streak`;
+        quiet++;
+      } else {
+        cell.classList.add("spend");
+        cell.title = `${iso} · spent`;
+      }
+      row.append(cell);
+    }
+    const cnt = document.createElement("span");
+    cnt.className = "calcount";
+    cnt.textContent = quiet || "";
+    row.append(cnt);
+    grid.append(row);
+    m++; if (m > 12) { m = 1; y++; }
+  }
+  wrap.append(grid);
+  return wrap;
+}
+
 // dayData: { spend:Set, activity:Set, dataMin, dataMax } from fetchDaySets.
 // range: [start,end] | null  (clamped to the data window).
 export function renderStreaks(container, dayData, range) {
@@ -56,8 +117,14 @@ export function renderStreaks(container, dayData, range) {
     container.innerHTML = "<p class='sub'>No transactions in this range.</p>";
     return;
   }
-  container.append(
+  const lists = document.createElement("div");
+  lists.className = "streak-lists";
+  lists.append(
     section("No-spend days", "no outflow in the ticked categories (transfers excluded)", dayData.spend, start, end, 150),
     section("No-activity days", "no transactions at all — in or out (all categories)", dayData.activity, start, end, 215),
+  );
+  container.append(
+    buildCalendar(dayData.spend, start, end, 150, "No-spend calendar"),
+    lists,
   );
 }
