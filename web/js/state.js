@@ -7,7 +7,8 @@ function defaults() {
   return {
     range: null,            // [start, end] or null = all time
     tab: 0,
-    otherPct: 0,            // "Other" target % of the pie (0 = off)
+    otherPct: 0,            // legacy global default (migration fallback)
+    otherByMetric: {},      // per-tab "Other" threshold %: mkey -> pct
     includeTransfers: false,
     scopes: {},             // scopeKey -> { metrics: { mkey: {groups, buckets} } }
   };
@@ -62,6 +63,18 @@ export function groupState(scope, mkey, g) {
   if (!("open" in gs)) gs.open = false;
   m.groups[g.key] = gs;
   return gs;
+}
+
+// Per-tab "Other" threshold. Falls back to the legacy global value the first
+// time a tab is touched, then diverges per tab.
+export function getOtherPct(state, mkey) {
+  const m = state.otherByMetric || {};
+  return mkey in m ? m[mkey] : (state.otherPct || 0);
+}
+
+export function setOtherPct(state, mkey, v) {
+  if (!state.otherByMetric) state.otherByMetric = {};
+  state.otherByMetric[mkey] = v;
 }
 
 export function bucketEnabled(scope, mkey, id) {

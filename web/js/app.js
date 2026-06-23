@@ -2,7 +2,7 @@
 import { METRICS, NOGROUP, OTHER, buildGroups, fmtMoney, ytd, scopeKey } from "./model.js";
 import { openDatabase, fetchBucketTotals, dataYearSpan } from "./db.js";
 import { buildColorMap } from "./colors.js";
-import { loadState, saveState, getScope } from "./state.js";
+import { loadState, saveState, getScope, getOtherPct, setOtherPct } from "./state.js";
 import { computeSlices, baseSlices, otherizedCount, targetForCount, PieView } from "./pie.js";
 import { TreeView } from "./tree.js";
 import { DateBar } from "./datebar.js";
@@ -33,10 +33,10 @@ async function useBytes(bytes, label) {
 
   datebar = new DateBar($("dateBar"), {
     yearLo: lo, yearHi: hi,
-    otherPct: state.otherPct,
+    otherPct: getOtherPct(state, METRICS[activeIdx].key),
     includeTransfers: state.includeTransfers,
     onRange: (s, e) => { state.range = [s, e]; saveState(state); reload(s, e); },
-    onOtherTarget: (v) => { state.otherPct = v; saveState(state); recomputeChart(); },
+    onOtherTarget: (v) => { setOtherPct(state, METRICS[activeIdx].key, v); saveState(state); recomputeChart(); },
     onOtherStep: (dir) => stepOther(dir),
     onTransfers: (b) => { state.includeTransfers = b; saveState(state); rebuildColors(); reload(...(state.range || ytd())); },
   });
@@ -95,6 +95,7 @@ function renderActive() {
 
   $("chartTitle").textContent = metric.title;
   $("methodology").textContent = metric.methodology;
+  if (datebar) datebar.setOther(getOtherPct(state, metric.key)); // reflect this tab's threshold
 
   tree = new TreeView($("tree"), {
     groups: currentGroups,
@@ -112,7 +113,7 @@ function renderActive() {
 
 function recomputeChart() {
   const metric = METRICS[activeIdx];
-  const { slices, otherized, visible } = computeSlices(currentGroups, currentScope, metric.key, state.otherPct);
+  const { slices, otherized, visible } = computeSlices(currentGroups, currentScope, metric.key, getOtherPct(state, metric.key));
   currentOtherized = otherized;
   pie.render(slices, currentGrand);
   if (tree) tree.applyGrey(otherized);
@@ -148,12 +149,12 @@ function stepOther(dir) {
   const total = base.reduce((a, s) => a + s.val, 0);
   if (!total) return;
   const sortedAsc = [...base].sort((a, b) => a.val - b.val);
-  let k = otherizedCount(sortedAsc, total, state.otherPct);
+  let k = otherizedCount(sortedAsc, total, getOtherPct(state, metric.key));
   let k2 = k + (dir > 0 ? 1 : -1);
   if (k2 === 1) k2 = dir > 0 ? 2 : 0; // Other needs >=2 members to exist
   k2 = Math.max(0, Math.min(sortedAsc.length, k2));
   const target = k2 >= 2 ? targetForCount(sortedAsc, total, k2) : 0;
-  state.otherPct = target;
+  setOtherPct(state, metric.key, target);
   saveState(state);
   datebar.setOther(target);
   recomputeChart();
