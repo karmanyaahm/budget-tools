@@ -103,7 +103,6 @@ body {
 .streak-section h3 { margin: 0 0 2px; font-size: 16px; }
 .streak-section .sub { margin: 0 0 4px; color: #555; font-size: 12px; }
 .runlist { overflow-y: auto; margin-top: 4px; border-top: 1px solid #eee; }
-.runrow { display: flex; justify-content: space-between; padding: 2px 2px;
-  font-variant-numeric: tabular-nums; border-bottom: 1px solid #f3f3f3; }
-.runrow .runlen { color: #888; }
-.runrow:nth-child(odd) { background: #fafafa; }
+.runrow { display: flex; justify-content: space-between; padding: 2px 6px;
+  font-variant-numeric: tabular-nums; }
+.runrow .runlen { color: inherit; opacity: 0.75; }

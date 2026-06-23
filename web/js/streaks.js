@@ -10,11 +10,11 @@ function fmtRun(r) {
   return `${r.start} → ${end}`;
 }
 
-function section(title, desc, present, winStart, winEnd) {
+function section(title, desc, present, winStart, winEnd, hue) {
   const runs = computeGaps(present, winStart, winEnd);
   const totalDays = computeGaps(new Set(), winStart, winEnd)[0]?.days || 0;
   const absent = runs.reduce((a, r) => a + r.days, 0);
-  const longest = runs.reduce((m, r) => Math.max(m, r.days), 0);
+  const longest = runs.reduce((m, r) => Math.max(m, r.days), 0) || 1;
   const pct = totalDays ? Math.round((absent / totalDays) * 100) : 0;
 
   const el = document.createElement("section");
@@ -30,6 +30,11 @@ function section(title, desc, present, winStart, winEnd) {
   for (const r of runs) {
     const row = document.createElement("div");
     row.className = "runrow";
+    // Color by length: longest = strong/dark, 1-day = faint.
+    const t = r.days / longest;            // 0..1
+    const light = 95 - 45 * t;             // 95% (faint) -> 50% (strong)
+    row.style.background = `hsl(${hue} 80% ${light}%)`;
+    if (light < 62) row.style.color = "#fff";
     row.innerHTML = `<span class="rundate">${fmtRun(r)}</span>` +
                     `<span class="runlen">${r.days}d</span>`;
     list.append(row);
@@ -52,7 +57,7 @@ export function renderStreaks(container, dayData, range) {
     return;
   }
   container.append(
-    section("No-spend days", "no outflow in the ticked categories (transfers excluded)", dayData.spend, start, end),
-    section("No-activity days", "no transactions at all — in or out (all categories)", dayData.activity, start, end),
+    section("No-spend days", "no outflow in the ticked categories (transfers excluded)", dayData.spend, start, end, 150),
+    section("No-activity days", "no transactions at all — in or out (all categories)", dayData.activity, start, end, 215),
   );
 }
