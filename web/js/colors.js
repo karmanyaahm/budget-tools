@@ -22,15 +22,37 @@ export function hsvToRgb(h, s, v) {
   return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
 
-// keys: iterable of strings -> Map<key, [r,g,b]>
+// Vibrant, well-separated palette indexed by position.
+const PALETTE = (() => {
+  const arr = [];
+  for (let i = 0; i < 160; i++) {
+    const h = (i * GOLDEN) % 1;
+    const [s, v] = SV[i % SV.length];
+    arr.push(hsvToRgb(h, s, v));
+  }
+  return arr;
+})();
+
+// keys: iterable of strings -> Map<key, [r,g,b]> (stable by name)
 export function buildColorMap(keys) {
   const sorted = [...new Set(keys)].sort();
   const map = new Map();
-  sorted.forEach((k, i) => {
-    const h = (i * GOLDEN) % 1;
-    const [s, v] = SV[i % SV.length];
-    map.set(k, hsvToRgb(h, s, v));
-  });
+  sorted.forEach((k, i) => map.set(k, PALETTE[i % PALETTE.length]));
+  return map;
+}
+
+// Color by RANK: largest value -> PALETTE[0], next -> [1], ... Ranks over every
+// group (by total) and bucket (by val) so the assignment is stable under
+// show/hide and combine/split toggles, and only re-ranks when the data changes.
+export function buildRankColors(groups) {
+  const items = [];
+  for (const g of groups) {
+    items.push(["group:" + g.key, g.total]);
+    for (const b of g.buckets) items.push(["bucket:" + b.id, b.val]);
+  }
+  items.sort((a, b) => b[1] - a[1]);
+  const map = new Map();
+  items.forEach(([k], i) => map.set(k, PALETTE[i % PALETTE.length]));
   return map;
 }
 

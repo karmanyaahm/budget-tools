@@ -2,7 +2,7 @@
 import { METRICS, NOGROUP, OTHER, buildGroups, fmtMoney, ytd, scopeKey } from "./model.js";
 import { openDatabase, fetchBucketTotals, fetchQuietData, dataYearSpan } from "./db.js";
 import { renderStreaks } from "./streaks.js";
-import { buildColorMap } from "./colors.js";
+import { buildRankColors } from "./colors.js";
 import { loadState, saveState, getScope, getOtherPct, setOtherPct, bucketEnabled } from "./state.js";
 import { computeSlices, baseSlices, otherizedCount, targetForCount, PieView } from "./pie.js";
 import { TreeView } from "./tree.js";
@@ -33,7 +33,6 @@ let currentDayData = null;   // {perBucketSpend, activity, dataMin, dataMax}
 // ---------- data load ----------
 async function useBytes(bytes, label) {
   db = await openDatabase(bytes);
-  rebuildColors();
   const [lo, hi] = dataYearSpan(db);
 
   datebar = new DateBar($("dateBar"), {
@@ -43,11 +42,11 @@ async function useBytes(bytes, label) {
     onRange: (s, e) => { state.range = [s, e]; saveState(state); reload(s, e); },
     onOtherTarget: (v) => { if (isStreaks()) return; setOtherPct(state, TABS[activeIdx].key, v); saveState(state); recomputeChart(); },
     onOtherStep: (dir) => { if (!isStreaks()) stepOther(dir); },
-    onTransfers: (b) => { state.includeTransfers = b; saveState(state); rebuildColors(); reload(...(state.range || ytd())); },
+    onTransfers: (b) => { state.includeTransfers = b; saveState(state); reload(...(state.range || ytd())); },
   });
 
   buildTabs();
-  pie = new PieView($("pie"), colorMap);
+  pie = new PieView($("pie"), new Map());
   pie.onHover = onSliceHover;
   $("status").textContent = label ? `Loaded ${label}` : "Loaded";
   $("app").classList.remove("hidden");
@@ -55,14 +54,6 @@ async function useBytes(bytes, label) {
 
   const range = state.range || ytd();
   datebar.setRange(range[0], range[1]); // fires onRange -> reload
-}
-
-function rebuildColors() {
-  const allRows = fetchBucketTotals(db, { includeTransfers: state.includeTransfers });
-  const keys = new Set(["group:" + NOGROUP]);
-  for (const r of allRows) { keys.add("group:" + r.group_key); keys.add("bucket:" + r.bucket_id); }
-  colorMap = buildColorMap(keys);
-  if (pie) pie.colorMap = colorMap;
 }
 
 // ---------- tabs ----------
@@ -108,6 +99,8 @@ function renderActive() {
   const metric = TABS[activeIdx];
   currentGroups = buildGroups(currentRows, metric.key);
   currentGrand = currentGroups.reduce((a, g) => a + g.total, 0) || 1;
+  colorMap = buildRankColors(currentGroups);
+  pie.colorMap = colorMap;
 
   $("chartTitle").textContent = metric.title;
   $("methodology").textContent = metric.methodology;
@@ -137,6 +130,7 @@ function renderStreaksTab() {
   // Tree of spending buckets (by gross outflow) for category selection.
   currentGroups = buildGroups(currentRows, "gross_spend");
   currentGrand = currentGroups.reduce((a, g) => a + g.total, 0) || 1;
+  colorMap = buildRankColors(currentGroups);
 
   tree = new TreeView($("tree"), {
     groups: currentGroups,
