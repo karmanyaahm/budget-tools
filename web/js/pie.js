@@ -36,12 +36,16 @@ export function otherizedCount(sortedAsc, total, thresholdPct) {
   return k;
 }
 
-// Threshold % that makes exactly the k smallest slices "Other" — i.e. the
-// k-th smallest slice's own share (so everything <= it is absorbed).
+// Threshold % that makes exactly the k smallest slices "Other". Use the midpoint
+// between the k-th value (included) and the (k+1)-th (excluded) so float
+// round-trips never land exactly on a boundary and drop/keep an extra slice.
 export function targetForCount(sortedAsc, total, k) {
   if (k <= 0 || total <= 0) return 0;
-  const idx = Math.min(k, sortedAsc.length) - 1;
-  return (sortedAsc[idx].val / total) * 100;
+  const n = sortedAsc.length;
+  const lo = sortedAsc[Math.min(k, n) - 1].val;     // k-th smallest (include)
+  const hi = k < n ? sortedAsc[k].val : lo;         // next (exclude), or none
+  const mid = hi > lo ? (lo + hi) / 2 : lo + 0.5;   // strictly between
+  return (mid / total) * 100;
 }
 
 // Merge every slice <= otherThresholdPct of the pie into one "Other" slice.
