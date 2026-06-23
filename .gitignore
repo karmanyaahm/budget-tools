@@ -1,0 +1,31 @@
+# --- Personal / financial data (DO NOT COMMIT) ---
+# Buckets app database — real accounts, balances, transactions
+*.buckets
+My Budget.buckets
+
+# Rendered charts of actual budget data
+budget_pies.png
+*.png
+
+# Personal view/layout config tied to your budget
+budget_pie_view.json
+
+# CSV exports / imports — real Venmo + bank transactions
+*.csv
+buckets.csv
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# --- OS / editor cruft ---
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
