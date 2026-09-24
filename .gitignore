@@ -29,3 +29,9 @@ Thumbs.db
 *~
 .idea/
 .vscode/
+
+# --- Secrets / SimpleFIN data (DO NOT COMMIT) ---
+.env
+simplefin_tokens.txt
+simplefin_data.json
+real_simplefin_accounts.json
