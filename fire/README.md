@@ -1,6 +1,6 @@
-# When can I stop working?
+# fire: a day-by-day FIRE simulator
 
-A day-by-day FIRE simulator: how many years at a big salary before you can coast, retire, or retire and never shrink your nest egg.
+How many years at a big salary before you can coast, retire, or retire and never shrink your nest egg.
 
 > **Heads up: this is a vibe-coded FIRE tool.** It was built in a conversation with Claude (an AI):
 > someone described what they wanted, and Claude wrote the code, the tests and the design log.
