@@ -19,7 +19,8 @@ from firemodel.solve import Solution, solve, sweep, what_if, x_kind
 
 console = Console()
 SERIES_COLORS = ["cyan", "orange", "magenta", "green"]  # fixed order, by scenario
-CATEGORY_COLORS = ["blue", "cyan", "green", "orange", "magenta", "red", "yellow", "gray", "white"]
+CATEGORY_COLORS = ["blue", "cyan", "green", "orange", "magenta", "red", "gray", "white", "green+"]  # plotext names
+# (plotext's "orange" is ANSI yellow, and its "yellow" prints uncolored, so "yellow" isn't used)
 
 
 def load_config(path: Path, plan: str | None = None, no_accounts: bool = False) -> Config:
@@ -280,9 +281,8 @@ def plot_expenses(cfg: Config, retire: float | None = None):
     colors = CATEGORY_COLORS[: len(order)]
     plt.stacked_bar(ages, [[v / 1e3 for v in cats[c]] for c in order], color=colors, width=0.8)
     plt.show()
-    # Legend below the chart (plotext's in-plot legend covers the first bars).
-    rich_name = {"orange": "dark_orange", "gray": "grey50"}
-    console.print("  ".join(f"[{rich_name.get(c, c)}]██[/] {cat}" for c, cat in zip(colors, order)) + "\n")
+    # Legend below the chart (plotext's in-plot legend covers the first bars), drawn with plotext's own colors.
+    print("  ".join(f"{plt.colorize('██', c)} {cat}" for c, cat in zip(colors, order)) + "\n")
 
 
 def plot_cashflow(r: Result):
