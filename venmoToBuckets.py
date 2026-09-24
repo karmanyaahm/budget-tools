@@ -65,7 +65,7 @@ def process(path: str, writer: csv.writer, seen: Set[str]) -> None:
                 if bal:
                     ending_bal = clean_amt(bal)
                 continue
-            if not tx_id.isdigit() or tx_id in seen:
+            if tx_id in seen:                      # numeric or alphanumeric IDs both valid
                 continue
 
             date     = row[dt_i].split("T")[0]
