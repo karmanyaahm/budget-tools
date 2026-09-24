@@ -146,6 +146,10 @@ Request #2 (2026-09-23, several follow-up messages sent while the work was in pr
 77. **README: mention using Claude Code as the interface, and moving across cities.** Added a "Using it with
     Claude Code" section (generic example prompt, no personal numbers), a moving-cities feature bullet, a
     `sf_to_austin` quickstart line, and a `move_to` bullet under "How to customize". The example already existed.
+78. **"Put example output screenshots in the readme"**: `docs/screenshots.py` runs `fire.py --plan sf_family` with
+    colors forced, cuts the output into sections (summary + income plan, what-if, net worth, expenses, cash flow,
+    accounts) and saves each as an SVG terminal screenshot with rich (140 columns). SVG renders on GitHub and stays
+    sharp; only the shipped example plan is used, so nothing private is in the images.
 ---
 
 ## 2. ⚙️ DECISIONS MADE BY CLAUDE (planning and implementation)

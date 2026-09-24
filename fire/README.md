@@ -1,4 +1,6 @@
-# fire: a vibe-coded FIRE simulator
+# When can I stop working?
+
+A day-by-day FIRE simulator: how many years at a big salary before you can coast, retire, or retire and never shrink your nest egg.
 
 > **Heads up: this is a vibe-coded FIRE tool.** It was built in a conversation with Claude (an AI):
 > someone described what they wanted, and Claude wrote the code, the tests and the design log.
@@ -28,6 +30,24 @@ What you get out:
   (`plan.move_to(other, at_age)`; example `sf_to_austin`: earn in SF, move to Austin at 35).
 - **Grid sweeps** across plans, income ladders, partner incomes, tax setups and account types, in one table.
 - **401(k) + Roth + 529** accounts, on by default; the summary also shows the answer without them (`--no-accounts` turns them off).
+
+## What it looks like
+
+`uv run fire.py --plan sf_family` (a shipped example: SF, one kid, a 120 → 175 → 230k ladder):
+
+![Summary: stop age per goal, with and without tax-advantaged accounts, and the income plan](docs/summary.svg)
+![Net worth by age for each goal](docs/networth.svg)
+![Expenses per year by category](docs/expenses.svg)
+![401(k), Roth, 529 and taxable balances by age](docs/accounts.svg)
+
+<details><summary>What-if table and cash flow</summary>
+
+![What-if: weeks sooner you can stop for extra savings at each age](docs/whatif.svg)
+![Cash flow: gross, take-home, expenses and portfolio sales by age](docs/cashflow.svg)
+
+</details>
+
+Regenerate these with `uv run docs/screenshots.py` (it only uses the shipped example plans).
 
 ## Using it with Claude Code
 
@@ -215,6 +235,7 @@ The full grid's `401k+Roth+529` rows stop 0.1–1.2 years earlier than these, mo
   (`PARTNERS`) for grids; the grids `grid_cities`, `grid_taxes`, `grid_profiles`, `grid_ladders`; `__init__.py`
   sets `DEFAULT_PLAN` / `DEFAULT_GRID`.
 - **`custom_plans/`** (gitignored): your plans and grids, same layout, searched first.
+- **`docs/`**: the README screenshots (SVG) and `screenshots.py`, which regenerates them.
 - **`firemodel/`**: the engine. `schema.py` (dataclasses, `X`/`RETIRE`, periods, `Accounts`), `plan.py` (`LifePlan`,
   coast salary, `with_partner`), `tax.py` (brackets, `regime()`), `sim.py` (the day-by-day simulation, accounts),
   `solve.py` (bisection, what-if, sweep), `grid.py` (parallel solving), `loader.py` (finds plans and grids).
