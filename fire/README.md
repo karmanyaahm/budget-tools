@@ -24,8 +24,19 @@ What you get out:
 - An **income-plan table** (every salary segment, gross and after tax) and **terminal charts** (net worth,
   expenses by category, cash flow).
 - **What-if tables**: how many weeks sooner you could stop if you saved an extra $A at age Y.
+- **Moving cities**: live in one city's plan until an age, then another's; expenses and taxes switch at that age
+  (`plan.move_to(other, at_age)`; example `sf_to_austin`: earn in SF, move to Austin at 35).
 - **Grid sweeps** across plans, income ladders, partner incomes, tax setups and account types, in one table.
 - **401(k) + Roth + 529** accounts, on by default; the summary also shows the answer without them (`--no-accounts` turns them off).
+
+## Using it with Claude Code
+
+The plans are plain Python, so [Claude Code](https://claude.com/claude-code) works well as the interface. Describe
+your life in plain English ("I make $180k, want two kids in my early 30s, might move somewhere cheaper at 35; when
+can I coast?") and have it write the plan in `custom_plans/`, run `fire.py` / `grid.py`, and put the results side
+by side. It's also good for questions like "what if my partner stops working?" or "does insurance really double for
+a couple?", for sanity-checking expense estimates, and for keeping a log of the assumptions you chose. Keep
+personal numbers in `custom_plans/` (gitignored) so they stay out of the repo.
 
 ## Quickstart
 
@@ -37,6 +48,7 @@ uv run fire.py --list                                  # plans and grids you can
 uv run fire.py --plan sf_family                        # solve every goal: summary, what-ifs, charts
 uv run fire.py --plan sf_family --no-plot --no-whatif  # summary and income plans only (about 1 s)
 uv run fire.py --plan austin_family --budget           # print every expense line and exit
+uv run fire.py --plan sf_to_austin                     # SF until 35, then Austin prices and Texas taxes
 uv run grid.py grid_cities                             # sweep SF/Austin × ladders × partners × accounts
 ```
 
@@ -199,8 +211,9 @@ The full grid's `401k+Roth+529` rows stop 0.1–1.2 years earlier than these, mo
   401(k) $24,500, Roth $7,500, 529 $16,000), real growth (5% until 60, then 4%), `END_AGE`,
   `EXPENSE_SAFETY_FACTOR`, the what-if grid, and `make_config(plan, taxes, accounts)`.
 - **`default_plans/`** (shipped examples): `sf_family`, `austin_family` (the override pattern), `single_lean`,
-  `three_kids`, `couple_with_car`; `ladders.py` (`LADDERS`) and `partners.py` (`PARTNERS`) for grids; the grids
-  `grid_cities`, `grid_taxes`, `grid_profiles`, `grid_ladders`; `__init__.py` sets `DEFAULT_PLAN` / `DEFAULT_GRID`.
+  `three_kids`, `couple_with_car`, `sf_to_austin` (a move at 35); `ladders.py` (`LADDERS`) and `partners.py`
+  (`PARTNERS`) for grids; the grids `grid_cities`, `grid_taxes`, `grid_profiles`, `grid_ladders`; `__init__.py`
+  sets `DEFAULT_PLAN` / `DEFAULT_GRID`.
 - **`custom_plans/`** (gitignored): your plans and grids, same layout, searched first.
 - **`firemodel/`**: the engine. `schema.py` (dataclasses, `X`/`RETIRE`, periods, `Accounts`), `plan.py` (`LifePlan`,
   coast salary, `with_partner`), `tax.py` (brackets, `regime()`), `sim.py` (the day-by-day simulation, accounts),
@@ -222,6 +235,9 @@ The full grid's `401k+Roth+529` rows stop 0.1–1.2 years earlier than these, mo
   `alt_careers={"tag": [...]}` runs extra income paths against the same spending.
 - **Taxes**: set `plan.taxes` to a `TAX_VARIANTS` name. To add one, write a function of the plan that returns
   `regime(start_age, end_age, federal, fica, state, joint=...)` segments. `flat_state(rate)` gives a flat-rate state.
+- **Moving cities**: `SF.move_to(AUSTIN, 35)` lives the first plan until 35 and the second after it. Each plan's
+  expense lines are clipped at the move, and the tax setup switches too; career, money and events before the move
+  come from the first plan. See `default_plans/sf_to_austin.py`. Compare a few move ages with a grid over plans.
 - **Partner**: `plan.with_partner(70_000)` (a flat salary, worked 25–55) or `with_partner([Income(...), ...])`.
   By default 50% of their take-home goes into the shared pool, and their own spending comes from the rest.
   For a fully joint household, pass `share=1.0` and `couple={line name or category: factor}`: what each line

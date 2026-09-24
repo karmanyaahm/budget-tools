@@ -143,6 +143,9 @@ Request #2 (2026-09-23, several follow-up messages sent while the work was in pr
     pools to the graph; and model in the default model what happens if I don't have any tax-advantaged accounts"** (D83).
 75. **Raise the personal plan's early-career salary** (plan setting only).
 76. **Couple rent factors in the personal plan** (a whole 1BR together instead of half a 2BR; per-city line names).
+77. **README: mention using Claude Code as the interface, and moving across cities.** Added a "Using it with
+    Claude Code" section (generic example prompt, no personal numbers), a moving-cities feature bullet, a
+    `sf_to_austin` quickstart line, and a `move_to` bullet under "How to customize". The example already existed.
 ---
 
 ## 2. ⚙️ DECISIONS MADE BY CLAUDE (planning and implementation)
