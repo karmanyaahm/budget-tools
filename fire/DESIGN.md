@@ -614,9 +614,14 @@ result was identical to the dollar** before M1 was applied.
 
 ## 3. Tabled / future work
 
-- ~~Joint household simulation~~: done in request 50 (D67).
+- ~~Joint household simulation~~: done in request 50 (D67); full joint household with couple factors in D81.
 
-- Tax-advantaged accounts (401k/IRA/Roth, withdrawal ordering, Roth conversion ladders).
+- ~~Tax-advantaged accounts: 401(k), Roth IRA, 529, withdrawal ordering~~: done (D70–D75; household pots D82; on by
+  default D83). Still missing:
+  - Roth conversion ladder / 72(t) / rule of 55 (early 401(k) access without the 10% penalty; the model funds the
+    pre-59½ years from taxable instead, which is conservative).
+  - Employer 401(k) match (a big lever; leaving it out is conservative).
+  - RMDs (leaving them out is optimistic), HSA, separate 59½ dates for partners of different ages.
 - Monte Carlo or historical-sequence returns.
 - More than one X per scenario (a 2-D sweep).
 
