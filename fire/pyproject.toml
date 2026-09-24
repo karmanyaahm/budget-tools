@@ -1,0 +1,13 @@
+[project]
+name = "fire-model"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "plotext>=5.3,<6",
+    "rich>=15.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
